@@ -1,1 +1,1 @@
-from .models import db, PricingForm
+from .models import db, PricingForm, ProjectPipeline

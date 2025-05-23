@@ -8,6 +8,7 @@ from models import db
 from routes.form_routes import form_bp
 from sqlalchemy import text
 from flask_migrate import Migrate
+from routes.pipeline_routes import pipeline_bp
 
 migrate = Migrate()
 
@@ -60,6 +61,7 @@ def create_app(config_name='default'):
     
     # Register blueprints
     app.register_blueprint(form_bp)
+    app.register_blueprint(pipeline_bp)
     
     # Create database tables
     with app.app_context():
@@ -134,6 +136,7 @@ def create_app(config_name='default'):
         })
     
     app.logger.info(f'Flask app created with {config_name} configuration')
+    
     
     return app
 

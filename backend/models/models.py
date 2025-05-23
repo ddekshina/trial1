@@ -5,6 +5,7 @@ import json
 db = SQLAlchemy()
 
 class PricingForm(db.Model):
+    
     """
     Main model for the Pricing Analyst Form
     """
@@ -149,3 +150,35 @@ class PricingForm(db.Model):
                         form_data[field] = None
         
         return PricingForm(**form_data)
+    
+class ProjectPipeline(db.Model):
+    __tablename__ = 'project_pipeline'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    form_id = db.Column(db.Integer, db.ForeignKey('pricing_forms.id'), nullable=False)
+    current_stage = db.Column(db.String(50), nullable=False, default='Pricing Submissions')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    notes = db.Column(db.Text, nullable=True)
+    quote_amount = db.Column(db.Float, nullable=True)
+    contract_amount = db.Column(db.Float, nullable=True)
+    delivery_date = db.Column(db.DateTime, nullable=True)
+    change_log = db.Column(db.JSON, nullable=True)  # Stores change history
+    
+    # Relationship
+    pricing_form = db.relationship('PricingForm', backref='pipeline')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'form_id': self.form_id,
+            'current_stage': self.current_stage,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'notes': self.notes,
+            'quote_amount': self.quote_amount,
+            'contract_amount': self.contract_amount,
+            'delivery_date': self.delivery_date.isoformat() if self.delivery_date else None,
+            'change_log': self.change_log,
+            'project_details': self.pricing_form.to_dict() if self.pricing_form else None
+        }

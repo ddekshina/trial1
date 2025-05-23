@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify, current_app
 from sqlalchemy.exc import SQLAlchemyError
+from routes.pipeline_routes import create_pipeline_item
 from models import db, PricingForm
 from utils.validators import validate_form_data
 import logging
@@ -79,14 +80,19 @@ def submit_form():
     
     try:
         # Create new form entry
-        form = PricingForm.from_dict(result)  # Use validated data
+        form = PricingForm.from_dict(result)
         db.session.add(form)
-        db.session.commit()
+        db.session.commit()  # Need to commit first to get form.id
         
-        # Return the created form with its ID
+        # Create pipeline item
+        pipeline_item = create_pipeline_item(form.id)
+        if not pipeline_item:
+            current_app.logger.warning(f"Failed to create pipeline item for form {form.id}")
+        
         return jsonify({
             "message": "Form submitted successfully",
             "form_id": form.id,
+            "pipeline_id": pipeline_item.id if pipeline_item else None,
             "form": form.to_dict()
         }), 201
         
