@@ -1,0 +1,4 @@
+.env
+venv
+instance\pricing_analyst.db
+__pycache__
