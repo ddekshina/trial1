@@ -42,6 +42,7 @@ const FormPage = () => {
     willProvideBiProjects: false,
     
     // Project Overview
+    subscriptionPlan: '',
     projectTitle: '',
     projectDescription: '',
     businessObjective: '',
@@ -107,6 +108,7 @@ const FormPage = () => {
   const transformFormDataForAPI = (data) => {
     const transformed = {
       // Client Information
+      
       pricing_analyst_name: data.pricingAnalystName,
       client_name: data.clientName,
       client_type: data.clientType,
@@ -126,6 +128,7 @@ const FormPage = () => {
       will_provide_bi_projects: data.willProvideBiProjects,
       
       // Project Overview
+      subscription_plan: data.subscriptionPlan,
       project_title: data.projectTitle,
       project_description: data.projectDescription,
       business_objective: data.businessObjective,
@@ -205,6 +208,7 @@ const FormPage = () => {
       willProvideBiProjects: apiData.will_provide_bi_projects || false,
       
       // Project Overview
+      subscriptionPlan: apiData.subscription_plan || '',
       projectTitle: apiData.project_title || '',
       projectDescription: apiData.project_description || '',
       businessObjective: apiData.business_objective || '',
