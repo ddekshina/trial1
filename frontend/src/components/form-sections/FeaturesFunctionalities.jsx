@@ -105,7 +105,7 @@ const FeaturesFunctionalities = ({ formData, updateFormData }) => {
           </div>
           {!hasRealTimeDatabase() && (
             <p className="mt-2 text-xs text-gray-500">
-              Note: Real-time Updates require MongoDB, Snowflake, or PostgreSQL database
+              Note: Real-time Updates require database
             </p>
           )}
         </div>

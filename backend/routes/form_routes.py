@@ -3,6 +3,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from routes.pipeline_routes import create_pipeline_item
 from models import db, PricingForm
 from utils.validators import validate_form_data
+from utils.quote_calculator import calculate_quote 
+from utils.pdf_generator import generate_quote_pdf
 import logging
 
 # Create a Blueprint for form routes
@@ -420,3 +422,26 @@ def get_form_options():
     }
     
     return jsonify(options), 200
+
+@form_bp.route('/forms/<int:form_id>/generate-quote', methods=['POST'])
+def generate_quote(form_id):
+    form = PricingForm.query.get(form_id)
+    if not form:
+        return jsonify({"error": "Form not found"}), 404
+    
+    # Calculate quote
+    quote_data = calculate_quote(form.to_dict())
+    
+    # Generate PDF
+    pdf_url = generate_quote_pdf(quote_data)
+    
+    # Update form with quote
+    form.quote_total = quote_data['total']
+    form.quote_breakdown = quote_data['breakdown']
+    form.quote_pdf_url = pdf_url
+    db.session.commit()
+    
+    return jsonify({
+        "quote": quote_data,
+        "pdf_url": pdf_url
+    }), 200

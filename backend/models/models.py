@@ -90,6 +90,11 @@ class PricingForm(db.Model):
     apis_api_available = db.Column(db.Boolean, default=False, nullable=True)
     apis_test_kit_link = db.Column(db.Text, nullable=True)
 
+    # Quote Calculation Fields
+    quote_total = db.Column(db.Float, nullable=True)
+    quote_breakdown = db.Column(db.JSON, nullable=True)  # Stores detailed cost breakdown
+    quote_pdf_url = db.Column(db.String(500), nullable=True)  # PDF storage path
+
     def to_dict(self):
         """Convert model to dictionary for JSON serialization"""
         result = {c.name: getattr(self, c.name) for c in self.__table__.columns}
@@ -163,13 +168,14 @@ class ProjectPipeline(db.Model):
     quote_amount = db.Column(db.Float, nullable=True)
     contract_amount = db.Column(db.Float, nullable=True)
     delivery_date = db.Column(db.DateTime, nullable=True)
-    change_log = db.Column(db.JSON, nullable=True)  # Stores change history
+    change_log = db.Column(db.JSON, nullable=True)
+    quote_details = db.Column(db.JSON, nullable=True)  
     
     # Relationship
     pricing_form = db.relationship('PricingForm', backref='pipeline')
     
     def to_dict(self):
-        return {
+        result = {
             'id': self.id,
             'form_id': self.form_id,
             'current_stage': self.current_stage,
@@ -180,5 +186,15 @@ class ProjectPipeline(db.Model):
             'contract_amount': self.contract_amount,
             'delivery_date': self.delivery_date.isoformat() if self.delivery_date else None,
             'change_log': self.change_log,
+            'quote_details': self.quote_details,
             'project_details': self.pricing_form.to_dict() if self.pricing_form else None
         }
+        
+        # Include quote details from pricing form if available
+        if self.pricing_form and self.pricing_form.quote_breakdown:
+            try:
+                result['quote_details'] = json.loads(self.pricing_form.quote_breakdown)
+            except:
+                result['quote_details'] = self.pricing_form.quote_breakdown
+                
+        return result

@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify, current_app
 from sqlalchemy.exc import SQLAlchemyError
+from routes.quote_routes import generate_form_quote
 from models import db, ProjectPipeline, PricingForm
 from datetime import datetime
 import logging
@@ -34,6 +35,13 @@ def update_pipeline_item(item_id):
         if not item:
             return jsonify({"error": "Pipeline item not found"}), 404
             
+        # Track if stage is changing to "Quote Generated"
+        stage_changing_to_quote = (
+            'current_stage' in data and 
+            data['current_stage'] == 'Quote Generated' and 
+            item.current_stage != 'Quote Generated'
+        )
+            
         # Update stage
         if 'current_stage' in data:
             item.current_stage = data['current_stage']
@@ -47,6 +55,13 @@ def update_pipeline_item(item_id):
             item.contract_amount = data['contract_amount']
         if 'delivery_date' in data:
             item.delivery_date = datetime.fromisoformat(data['delivery_date'])
+            
+        # If moving to Quote Generated stage and no quote exists, generate one
+        if stage_changing_to_quote and not item.pricing_form.quote_total:
+            # Generate quote automatically
+            quote_result = generate_form_quote(item.pricing_form.id)
+            if not isinstance(quote_result, tuple):  # If successful
+                item.quote_amount = quote_result['total']
             
         # Update change log
         if 'current_stage' in data:

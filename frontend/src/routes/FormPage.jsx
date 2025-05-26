@@ -10,6 +10,8 @@ import PricingFactors from '../components/form-sections/PricingFactors';
 import CompetitiveInputs from '../components/form-sections/CompetitiveInputs';
 import AnalystNotes from '../components/form-sections/AnalystNotes';
 import DownloadShareButtons from '../components/DownloadShareButtons';
+import { Tabs, Tab, Box } from '@mui/material'; 
+import QuoteGenerator from '../components/QuoteGenerator'; 
 
 const API_BASE_URL = 'http://localhost:5000';
 
@@ -19,6 +21,8 @@ const FormPage = () => {
   const [submitStatus, setSubmitStatus] = useState({ type: '', message: '' });
   const [submittedFormId, setSubmittedFormId] = useState(null);
   const [isFormSubmitted, setIsFormSubmitted] = useState(false);
+  const [activeTab, setActiveTab] = useState('form');
+  const [quote, setQuote] = useState(null);
 
   // Enhanced form state with all new fields
   const [formData, setFormData] = useState({
@@ -284,6 +288,9 @@ const FormPage = () => {
         message: `Form submitted successfully! Form ID: ${formId || 'N/A'}`
       });
 
+      // Switch to quote tab after successful submission
+      setActiveTab('quote');
+
       // Scroll to success message
       setTimeout(() => {
         const successElement = document.getElementById('success-section');
@@ -316,6 +323,7 @@ const FormPage = () => {
     setIsFormSubmitted(false);
     setSubmittedFormId(null);
     setSubmitStatus({ type: '', message: '' });
+    setActiveTab('form'); // Switch back to form tab when resetting
     
     // Reset to initial state
     setFormData({
@@ -409,79 +417,102 @@ const FormPage = () => {
 
   return (
     <FormLayout>
-      <form onSubmit={handleSubmit} className="max-w-5xl mx-auto p-4">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-2xl font-bold text-blue-800">Pricing Analyst Form</h1>
-          {isFormSubmitted && (
-            <button
-              type="button"
-              onClick={handleResetForm}
-              className="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg transition duration-300"
-            >
-              Create New Form
-            </button>
-          )}
-        </div>
-        
-        {isLoading ? (
-          <div className="flex justify-center items-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-          </div>
-        ) : (
-          <>
-            <ClientInformation formData={formData} updateFormData={updateFormData} />
-            <ProjectOverview formData={formData} updateFormData={updateFormData} />
-            <TechnicalScope formData={formData} updateFormData={updateFormData} />
-            <FeaturesFunctionalities formData={formData} updateFormData={updateFormData} />
-            <PricingFactors formData={formData} updateFormData={updateFormData} />
-            <CompetitiveInputs formData={formData} updateFormData={updateFormData} />
-            <AnalystNotes formData={formData} updateFormData={updateFormData} />
-            
-            {submitStatus.message && (
-              <div 
-                id="success-section"
-                className={`p-4 my-6 rounded-lg ${submitStatus.type === 'success' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'}`}
-              >
-                <div className="font-medium">{submitStatus.message}</div>
-              </div>
-            )}
-            
-            {/* Submit button - only show if form is not submitted */}
-            {!isFormSubmitted && (
-              <div className="mt-8 flex justify-center">
-                <button 
-                  type="submit" 
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg shadow-md transition duration-300"
-                  disabled={isLoading}
+      <div className="max-w-5xl mx-auto p-4">
+        {/* TABS NAVIGATION */}
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 4 }}>
+          <Tabs 
+            value={activeTab} 
+            onChange={(e, newTab) => setActiveTab(newTab)}
+            indicatorColor="primary"
+            textColor="primary"
+          >
+            <Tab label="Pricing Form" value="form" />
+            <Tab label="Quote Generator" value="quote" disabled={!isFormSubmitted} />
+          </Tabs>
+        </Box>
+
+        {/* FORM TAB */}
+        {activeTab === 'form' && (
+          <form onSubmit={handleSubmit}>
+            <div className="flex justify-between items-center mb-8">
+              <h1 className="text-2xl font-bold text-blue-800">Pricing Analyst Form</h1>
+              {isFormSubmitted && (
+                <button
+                  type="button"
+                  onClick={handleResetForm}
+                  className="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg transition duration-300"
                 >
-                  {isLoading ? 'Submitting...' : 'Submit Pricing Analysis'}
+                  Create New Form
                 </button>
-              </div>
-            )}
+              )}
+            </div>
             
-            {/* Download and Share buttons */}
-            {(isFormSubmitted || hasFormData) && (
-              <div className="mt-8 mb-8">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-blue-800 mb-4 text-center">
-                    {isFormSubmitted ? 'Your Report is Ready!' : 'Preview & Share'}
-                  </h3>
-                  <p className="text-gray-600 text-center mb-4">
-                    {isFormSubmitted 
-                      ? 'Download your pricing analysis report or share it with your team.'
-                      : 'You can download or share your current form data as a PDF report.'}
-                  </p>
-                  <DownloadShareButtons
-                    formData={formData}
-                    formId={submittedFormId}
-                    isVisible={true}
-                  />
-                </div>
+            {isLoading ? (
+              <div className="flex justify-center items-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
               </div>
+            ) : (
+              <>
+                <ClientInformation formData={formData} updateFormData={updateFormData} />
+                <ProjectOverview formData={formData} updateFormData={updateFormData} />
+                <TechnicalScope formData={formData} updateFormData={updateFormData} />
+                <FeaturesFunctionalities formData={formData} updateFormData={updateFormData} />
+                <PricingFactors formData={formData} updateFormData={updateFormData} />
+                <CompetitiveInputs formData={formData} updateFormData={updateFormData} />
+                <AnalystNotes formData={formData} updateFormData={updateFormData} />
+                
+                {submitStatus.message && (
+                  <div 
+                    id="success-section"
+                    className={`p-4 my-6 rounded-lg ${submitStatus.type === 'success' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'}`}
+                  >
+                    <div className="font-medium">{submitStatus.message}</div>
+                  </div>
+                )}
+                
+                {/* Submit button - only show if form is not submitted */}
+                {!isFormSubmitted && (
+                  <div className="mt-8 flex justify-center">
+                    <button 
+                      type="submit" 
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg shadow-md transition duration-300"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? 'Submitting...' : 'Submit Pricing Analysis'}
+                    </button>
+                  </div>
+                )}
+                
+                {/* Download and Share buttons */}
+                {(isFormSubmitted || hasFormData) && (
+                  <div className="mt-8 mb-8">
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                      <h3 className="text-lg font-semibold text-blue-800 mb-4 text-center">
+                        {isFormSubmitted ? 'Your Report is Ready!' : 'Preview & Share'}
+                      </h3>
+                      <p className="text-gray-600 text-center mb-4">
+                        {isFormSubmitted 
+                          ? 'Download your pricing analysis report or share it with your team.'
+                          : 'You can download or share your current form data as a PDF report.'}
+                      </p>
+                      <DownloadShareButtons
+                        formData={formData}
+                        formId={submittedFormId}
+                        isVisible={true}
+                      />
+                    </div>
+                  </div>
+                )}
+              </>
             )}
-          </>
+          </form>
         )}
-      </form>
+
+        {/* QUOTE TAB (Shows after submission) */}
+        {activeTab === 'quote' && isFormSubmitted && (
+          <QuoteGenerator formData={formData} />
+        )}
+      </div>
     </FormLayout>
   );
 };

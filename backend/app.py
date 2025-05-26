@@ -1,7 +1,7 @@
 import os
 import logging
 import pathlib
-from flask import Flask, jsonify, request, current_app
+from flask import Flask, jsonify, request, current_app, send_from_directory
 from flask_cors import CORS
 from config import config
 from models import db
@@ -9,6 +9,7 @@ from routes.form_routes import form_bp
 from sqlalchemy import text
 from flask_migrate import Migrate
 from routes.pipeline_routes import pipeline_bp
+from routes.quote_routes import quote_bp
 
 migrate = Migrate()
 
@@ -41,6 +42,9 @@ def create_app(config_name='default'):
     """
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_object(config[config_name])
+
+    app.config['UPLOAD_FOLDER'] = os.path.join(app.instance_path, 'uploads')
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     
     # Configure logging
     configure_logging(app)
@@ -62,6 +66,7 @@ def create_app(config_name='default'):
     # Register blueprints
     app.register_blueprint(form_bp)
     app.register_blueprint(pipeline_bp)
+    app.register_blueprint(quote_bp)  
     
     # Create database tables
     with app.app_context():
@@ -137,7 +142,11 @@ def create_app(config_name='default'):
     
     app.logger.info(f'Flask app created with {config_name} configuration')
     
-    
+    @app.route('/uploads/<filename>')
+    def serve_uploaded_pdf(filename):
+        upload_folder = os.path.join(app.instance_path, 'uploads')
+        return send_from_directory(upload_folder, filename)
+
     return app
 
 
