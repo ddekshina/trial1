@@ -94,6 +94,39 @@ class PricingForm(db.Model):
     quote_total = db.Column(db.Float, nullable=True)
     quote_breakdown = db.Column(db.JSON, nullable=True)  # Stores detailed cost breakdown
     quote_pdf_url = db.Column(db.String(500), nullable=True)  # PDF storage path
+    # Demo client fields
+    wants_demo = db.Column(db.Boolean, default=False)
+    company_website = db.Column(db.String(255))
+    use_case_description = db.Column(db.Text)
+    reference_links = db.Column(db.Text)  # Stored as comma-separated
+    number_of_verticals = db.Column(db.Integer)
+    demo_verticals = db.Column(db.Text)  # Stored as comma-separated
+    custom_vertical = db.Column(db.String(100))
+    demo_scheduled_at = db.Column(db.DateTime)
+    timezone = db.Column(db.String(50))
+    country = db.Column(db.String(100))
+    city = db.Column(db.String(100))
+    meeting_link = db.Column(db.String(255))
+    next_steps = db.Column(db.Text)
+    client_suggestions = db.Column(db.Text)
+    
+    # Business analysis fields
+    wants_business_analysis = db.Column(db.Boolean, default=False)
+    problem_statement = db.Column(db.Text)
+    case_description = db.Column(db.Text)
+    stakeholders = db.Column(db.Text)
+    visualization_goal = db.Column(db.Text)
+    resources_status = db.Column(db.String(100))
+    has_support_team = db.Column(db.String(20))
+    has_complex_math = db.Column(db.String(20))
+    
+    # General fields
+    client_type_tag = db.Column(db.String(20))  # 'demo', 'business-analysis', 'both'
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationship to documents
+    documents = db.relationship('FormDocument', backref='pricing_form', lazy=True)
+
 
     def to_dict(self):
         """Convert model to dictionary for JSON serialization"""
@@ -198,3 +231,13 @@ class ProjectPipeline(db.Model):
                 result['quote_details'] = self.pricing_form.quote_breakdown
                 
         return result
+    
+class FormDocument(db.Model):
+    __tablename__ = 'form_documents'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    form_id = db.Column(db.Integer, db.ForeignKey('pricing_forms.id'))
+    file_path = db.Column(db.String(255))
+    file_name = db.Column(db.String(255))
+    file_type = db.Column(db.String(50))
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)

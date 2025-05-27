@@ -93,6 +93,15 @@ class PricingFormSchema(Schema):
     email = fields.Email(allow_none=True)
     phone_number = fields.String(validate=validate.Length(max=50), allow_none=True)
     
+    # Demo and Business Analysis Fields
+    wants_demo = fields.Boolean(allow_none=True)
+    company_website = fields.String(validate=validate.Length(max=500), allow_none=True)
+    use_case_description = fields.String(allow_none=True)
+    demo_scheduled_at = fields.DateTime(allow_none=True)
+    wants_business_analysis = fields.Boolean(allow_none=True)
+    problem_statement = fields.String(allow_none=True)
+    visualization_goal = fields.String(allow_none=True)
+    
     # BI Questions
     has_bi_team = fields.Boolean(allow_none=True)
     wants_to_use_tool_with_bi = fields.Boolean(allow_none=True)
@@ -307,6 +316,32 @@ class PricingFormSchema(Schema):
             raise ValidationError('Invalid email address')
         
         return value
+
+    @post_load
+    def validate_conditional_fields(self, data, **kwargs):
+        """Validate conditional fields based on wants_demo and wants_business_analysis"""
+        errors = {}
+        
+        # Demo validation
+        if data.get('wants_demo') == True:
+            if not data.get('company_website'):
+                errors['company_website'] = 'Company website is required for demo clients'
+            if not data.get('use_case_description'):
+                errors['use_case_description'] = 'Use case description is required'
+            if not data.get('demo_scheduled_at'):
+                errors['demo_scheduled_at'] = 'Demo schedule date is required'
+        
+        # Business analysis validation
+        if data.get('wants_business_analysis') == True:
+            if not data.get('problem_statement'):
+                errors['problem_statement'] = 'Problem statement is required for business analysis'
+            if not data.get('visualization_goal'):
+                errors['visualization_goal'] = 'Visualization goal is required'
+        
+        if errors:
+            raise ValidationError(errors)
+        
+        return data
 
 def validate_form_data(data):
     """

@@ -1,11 +1,17 @@
+import json
 from flask import Blueprint, request, jsonify, current_app
+from werkzeug.utils import secure_filename
 from sqlalchemy.exc import SQLAlchemyError
 from routes.pipeline_routes import create_pipeline_item
 from models import db, PricingForm
+from models.models import FormDocument
 from utils.validators import validate_form_data
 from utils.quote_calculator import calculate_quote 
 from utils.pdf_generator import generate_quote_pdf
 import logging
+import uuid
+import os
+from datetime import datetime
 
 # Create a Blueprint for form routes
 form_bp = Blueprint('forms', __name__, url_prefix='/api')
@@ -69,43 +75,81 @@ def submit_form():
       500:
         description: Server error
     """
-    # Check if the request has JSON data
-    if not request.is_json:
-        return jsonify({"error": "Request must be JSON"}), 400
-    
-    data = request.get_json()
-    
-    # Validate input data
-    is_valid, result = validate_form_data(data)
-    if not is_valid:
-        return jsonify({"error": "Validation failed", "details": result}), 400
-    
     try:
+        if request.is_json:
+            data = request.get_json()
+        else:
+            data = request.form.to_dict()
+        files = request.files.getlist('files')
+        
+        # Validate form data
+        errors = validate_form_data(data)
+        if errors:
+            return jsonify({'success': False, 'errors': errors}), 400
+        
         # Create new form entry
-        form = PricingForm.from_dict(result)
-        db.session.add(form)
-        db.session.commit()  # Need to commit first to get form.id
+        new_form = PricingForm(
+            # Existing fields...
+            wants_demo=data.get('wantsDemo') == 'true',
+            company_website=data.get('companyWebsite'),
+            use_case_description=data.get('useCaseDescription'),
+            reference_links=data.get('referenceLinks'),
+            number_of_verticals=data.get('numberOfVerticals'),
+            demo_verticals=','.join(data.get('demoVerticals', [])),
+            custom_vertical=data.get('customVertical'),
+            demo_scheduled_at=datetime.fromisoformat(data.get('demoScheduledAt')) if data.get('demoScheduledAt') else None,
+            timezone=data.get('timezone'),
+            country=data.get('country'),
+            city=data.get('city'),
+            meeting_link=data.get('meetingLink'),
+            next_steps=data.get('nextSteps'),
+            client_suggestions=data.get('clientSuggestions'),
+            wants_business_analysis=data.get('wantsBusinessAnalysis') == 'true',
+            problem_statement=data.get('problemStatement'),
+            case_description=data.get('caseDescription'),
+            stakeholders=data.get('stakeholders'),
+            visualization_goal=data.get('visualizationGoal'),
+            resources_status=data.get('resourcesStatus'),
+            has_support_team=data.get('hasSupportTeam'),
+            has_complex_math=data.get('hasComplexMath'),
+            client_type_tag=data.get('clientTypeTag')
+        )
         
-        # Create pipeline item
-        pipeline_item = create_pipeline_item(form.id)
-        if not pipeline_item:
-            current_app.logger.warning(f"Failed to create pipeline item for form {form.id}")
+        db.session.add(new_form)
+        db.session.commit()
         
-        return jsonify({
-            "message": "Form submitted successfully",
-            "form_id": form.id,
-            "pipeline_id": pipeline_item.id if pipeline_item else None,
-            "form": form.to_dict()
-        }), 201
+        # Handle file uploads
+        if files:
+            upload_folder = os.path.join(current_app.instance_path, 'uploads')
+            os.makedirs(upload_folder, exist_ok=True)
+            
+            for file in files:
+                if file.filename == '':
+                    continue
+                
+                filename = secure_filename(file.filename)
+                unique_id = uuid.uuid4().hex
+                new_filename = f"{unique_id}_{filename}"
+                file_path = os.path.join(upload_folder, new_filename)
+                
+                file.save(file_path)
+                
+                new_doc = FormDocument(
+                    form_id=new_form.id,
+                    file_path=file_path,
+                    file_name=filename,
+                    file_type=filename.split('.')[-1].lower()
+                )
+                db.session.add(new_doc)
+            
+            db.session.commit()
         
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        current_app.logger.error(f"Database error: {str(e)}")
-        return jsonify({"error": "Database error", "details": str(e)}), 500
+        return jsonify({'success': True, 'form_id': new_form.id}), 201
+    
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Unexpected error: {str(e)}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
+        current_app.logger.error(f"Form submission error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @form_bp.route('/forms', methods=['GET'])
 def get_all_forms():
@@ -239,7 +283,7 @@ def update_form(form_id):
         if not form:
             return jsonify({"error": "Form not found"}), 404
             
-        data = request.get_json()
+        data = json.loads(request.form['data'])
         
         # Validate input data
         is_valid, result = validate_form_data(data)

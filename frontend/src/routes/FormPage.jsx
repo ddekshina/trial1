@@ -9,7 +9,10 @@ import FeaturesFunctionalities from '../components/form-sections/FeaturesFunctio
 import PricingFactors from '../components/form-sections/PricingFactors';
 import CompetitiveInputs from '../components/form-sections/CompetitiveInputs';
 import AnalystNotes from '../components/form-sections/AnalystNotes';
+import DemoClient from '../components/form-sections/DemoClient';
+import BusinessAnalysis from '../components/form-sections/BusinessAnalysis';
 import DownloadShareButtons from '../components/DownloadShareButtons';
+import FileUploader from '../components/FileUploader';
 import { Tabs, Tab, Box } from '@mui/material'; 
 import QuoteGenerator from '../components/QuoteGenerator'; 
 
@@ -22,10 +25,13 @@ const FormPage = () => {
   const [submittedFormId, setSubmittedFormId] = useState(null);
   const [isFormSubmitted, setIsFormSubmitted] = useState(false);
   const [activeTab, setActiveTab] = useState('form');
+  const [files, setFiles] = useState([]);
   const [quote, setQuote] = useState(null);
 
   // Enhanced form state with all new fields
   const [formData, setFormData] = useState({
+    wantsDemo: false,
+    wantsBusinessAnalysis: false,
     // Client Information
     pricingAnalystName: '',
     clientName: '',
@@ -97,7 +103,36 @@ const FormPage = () => {
     internalAnalystNotes: '',
     suggestedPricingModel: '',
     riskFactors: '',
-    suggestedNextSteps: ''
+    suggestedNextSteps: '',
+
+  // DEMO CLIENT FIELDS
+  companyWebsite: '',
+  numberOfVerticals: '',
+  demoVerticals: [],
+  customVertical: '',
+  demoUseCase: '',
+  referenceLinks: '',
+  smartcardLinks: '',
+  demoDatetime: '',
+  demoTimezone: '',
+  demoCountry: '',
+  demoCity: '',
+  demoMeetingLink: '',
+  clientAttachments: [],
+  demoExtraAttachments: [],
+  nextDemoStep: '',
+  clientProjectIdeas: '',
+
+  // BUSINESS ANALYSIS FIELDS
+  problemStatement: '',
+  caseDescription: '',
+  stakeholders: '',
+  finalGoal: '',
+  resourcesDocumented: '',
+  docTimeline: '',
+  shouldDocument: '',
+  hasSupportTeam: '',
+  hasComplexMath: '',
   });
 
   // Update form data handler
@@ -112,7 +147,6 @@ const FormPage = () => {
   const transformFormDataForAPI = (data) => {
     const transformed = {
       // Client Information
-      
       pricing_analyst_name: data.pricingAnalystName,
       client_name: data.clientName,
       client_type: data.clientType,
@@ -183,7 +217,37 @@ const FormPage = () => {
       internal_analyst_notes: data.internalAnalystNotes,
       suggested_pricing_model: data.suggestedPricingModel,
       risk_factors: data.riskFactors,
-      suggested_next_steps: data.suggestedNextSteps
+      suggested_next_steps: data.suggestedNextSteps,
+
+      // Demo Client Fields
+      wants_demo: data.wantsDemo,
+      company_website: data.companyWebsite,
+      use_case_description: data.useCaseDescription,
+      reference_links: data.referenceLinks,
+      number_of_verticals: data.numberOfVerticals,
+      demo_verticals: data.demoVerticals,
+      custom_vertical: data.customVertical,
+      demo_scheduled_at: data.demoScheduledAt,
+      timezone: data.timezone,
+      meeting_link: data.meetingLink,
+      next_steps: data.nextSteps,
+      client_suggestions: data.clientSuggestions,
+
+      // Business Analysis Fields
+      wants_business_analysis: data.wantsBusinessAnalysis,
+      problem_statement: data.problemStatement,
+      case_description: data.caseDescription,
+      stakeholders: data.stakeholders,
+      visualization_goal: data.visualizationGoal,
+      resources_status: data.resourcesStatus,
+      has_support_team: data.hasSupportTeam,
+      has_complex_math: data.hasComplexMath,
+
+      // Client type tag
+      client_type_tag: 
+        data.wantsDemo && data.wantsBusinessAnalysis ? 'both' :
+        data.wantsDemo ? 'demo' :
+        data.wantsBusinessAnalysis ? 'business-analysis' : ''
     };
     
     return transformed;
@@ -263,60 +327,90 @@ const FormPage = () => {
       internalAnalystNotes: apiData.internal_analyst_notes || '',
       suggestedPricingModel: apiData.suggested_pricing_model || '',
       riskFactors: apiData.risk_factors || '',
-      suggestedNextSteps: apiData.suggested_next_steps || ''
+      suggestedNextSteps: apiData.suggested_next_steps || '',
+
+      // Demo Client Fields
+      wantsDemo: apiData.wants_demo || false,
+      companyWebsite: apiData.company_website || '',
+      useCaseDescription: apiData.use_case_description || '',
+      referenceLinks: apiData.reference_links || '',
+      numberOfVerticals: apiData.number_of_verticals || 0,
+      demoVerticals: apiData.demo_verticals || [],
+      customVertical: apiData.custom_vertical || '',
+      demoScheduledAt: apiData.demo_scheduled_at || '',
+      timezone: apiData.timezone || '',
+      meetingLink: apiData.meeting_link || '',
+      nextSteps: apiData.next_steps || '',
+      clientSuggestions: apiData.client_suggestions || '',
+
+      // Business Analysis Fields
+      wantsBusinessAnalysis: apiData.wants_business_analysis || false,
+      problemStatement: apiData.problem_statement || '',
+      caseDescription: apiData.case_description || '',
+      stakeholders: apiData.stakeholders || '',
+      visualizationGoal: apiData.visualization_goal || '',
+      resourcesStatus: apiData.resources_status || '',
+      hasSupportTeam: apiData.has_support_team || '',
+      hasComplexMath: apiData.has_complex_math || ''
     };
     
     return transformed;
   };
 
   // Form submission handler
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setSubmitStatus({ type: '', message: '' });
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setIsLoading(true);
+  setSubmitStatus({ type: '', message: '' });
+  
+  try {
+    const formDataToSubmit = new FormData();
+    const submissionData = transformFormDataForAPI(formData);
     
-    try {
-      const submissionData = transformFormDataForAPI(formData);
-      const response = await axios.post(`${API_BASE_URL}/api/forms`, submissionData);
-      
-      const formId = response.data.form_id || response.data.id;
-      setSubmittedFormId(formId);
-      setIsFormSubmitted(true);
-      
-      setSubmitStatus({
-        type: 'success',
-        message: `Form submitted successfully! Form ID: ${formId || 'N/A'}`
-      });
+    // Append form data as JSON
+    formDataToSubmit.append('data', JSON.stringify(submissionData));
+    
+    // Append files
+    files.forEach(file => {
+      formDataToSubmit.append('files', file.file);
+    });
 
-      // Switch to quote tab after successful submission
-      setActiveTab('quote');
-
-      // Scroll to success message
-      setTimeout(() => {
-        const successElement = document.getElementById('success-section');
-        if (successElement) {
-          successElement.scrollIntoView({ behavior: 'smooth' });
-        }
-      }, 100);
-      
-    } catch (error) {
-      console.error('Error submitting form:', error);
-      let errorMessage = 'Failed to submit form. Please try again.';
-      
-      if (error.response?.data?.details) {
-        errorMessage = `Validation errors: ${JSON.stringify(error.response.data.details)}`;
-      } else if (error.response?.data?.error) {
-        errorMessage = error.response.data.error;
+    const response = await axios.post(`${API_BASE_URL}/api/forms`, formDataToSubmit, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
       }
-      
-      setSubmitStatus({
-        type: 'error',
-        message: errorMessage
-      });
-    } finally {
-      setIsLoading(false);
+    });
+    
+    const formId = response.data.form_id || response.data.id;
+    setSubmittedFormId(formId);
+    setIsFormSubmitted(true);
+    
+    setSubmitStatus({
+      type: 'success',
+      message: `Form submitted successfully! Form ID: ${formId || 'N/A'}`
+    });
+
+    setActiveTab('quote');
+  } catch (error) {
+    console.error('Full error:', error);
+    console.error('Response data:', error.response?.data);
+    console.error('Response status:', error.response?.status);
+    
+    let errorMessage = 'Failed to submit form. Please try again.';
+    if (error.response?.data?.details) {
+      errorMessage = `Validation errors: ${JSON.stringify(error.response.data.details)}`;
+    } else if (error.response?.data?.error) {
+      errorMessage = error.response.data.error;
     }
-  };
+    
+    setSubmitStatus({
+      type: 'error',
+      message: errorMessage
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   // Reset form handler
   const handleResetForm = () => {
@@ -324,9 +418,12 @@ const FormPage = () => {
     setSubmittedFormId(null);
     setSubmitStatus({ type: '', message: '' });
     setActiveTab('form'); // Switch back to form tab when resetting
+    setFiles([]);
     
     // Reset to initial state
     setFormData({
+      wantsDemo: false,
+      wantsBusinessAnalysis: false,
       pricingAnalystName: '',
       clientName: '',
       clientType: 'B2B',
@@ -380,9 +477,28 @@ const FormPage = () => {
       internalAnalystNotes: '',
       suggestedPricingModel: '',
       riskFactors: '',
-      suggestedNextSteps: ''
+      suggestedNextSteps: '',
+      companyWebsite: '',
+      useCaseDescription: '',
+      referenceLinks: '',
+      numberOfVerticals: 0,
+      demoVerticals: [],
+      customVertical: '',
+      demoScheduledAt: '',
+      timezone: '',
+      meetingLink: '',
+      nextSteps: '',
+      clientSuggestions: '',
+      problemStatement: '',
+      caseDescription: '',
+      stakeholders: '',
+      visualizationGoal: '',
+      resourcesStatus: '',
+      hasSupportTeam: '',
+      hasComplexMath: ''
     });
   };
+
 
   // Fetch existing form data if ID is provided
   useEffect(() => {
@@ -460,6 +576,45 @@ const FormPage = () => {
                 <PricingFactors formData={formData} updateFormData={updateFormData} />
                 <CompetitiveInputs formData={formData} updateFormData={updateFormData} />
                 <AnalystNotes formData={formData} updateFormData={updateFormData} />
+
+                {/* Demo Client Section */}
+                <div className="mt-6 p-4 border rounded-lg">
+                  <label className="inline-flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={formData.wantsDemo}
+                      onChange={(e) => updateFormData(null, 'wantsDemo', e.target.checked)}
+                      className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                    />
+                    <span className="ml-2">This is a demo client</span>
+                  </label>
+
+                  {formData.wantsDemo && (
+                    <DemoClient formData={formData} updateFormData={updateFormData} />
+                  )}
+                </div>
+
+                {/* Business Analysis Section */}
+                <div className="mt-6 p-4 border rounded-lg">
+                  <label className="inline-flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={formData.wantsBusinessAnalysis}
+                      onChange={(e) => updateFormData(null, 'wantsBusinessAnalysis', e.target.checked)}
+                      className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                    />
+                    <span className="ml-2">This requires business analysis</span>
+                  </label>
+
+                  {formData.wantsBusinessAnalysis && (
+                    <BusinessAnalysis formData={formData} updateFormData={updateFormData} />
+                  )}
+                </div>
+
+                {/* File Uploader */}
+                <div className="mt-6">
+                  <FileUploader files={files} setFiles={setFiles} />
+                </div>
                 
                 {submitStatus.message && (
                   <div 
